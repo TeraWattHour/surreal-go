@@ -41,6 +41,16 @@ func (db *DB) Let(identifier string, value any) error {
 	return err
 }
 
+func (db *DB) SignIn(creds Map) error {
+	_, err := db.conn.Send("signin", []any{creds})
+	return err
+}
+
+func (db *DB) SignUp(creds Map) error {
+	_, err := db.conn.Send("signup", []any{creds})
+	return err
+}
+
 // Query sends a query (or multiple semicolon separated queries) to the database and returns the result (results).
 // The result is decoded into the scanDestinations. If there are multiple queries, the results are decoded into the
 // corresponding scanDestinations. `vars` is a map of variables that are used to bind the query (or queries).

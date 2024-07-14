@@ -28,7 +28,14 @@ func TestEstablishConnection(t *testing.T) {
 	defer db.Close()
 
 	if err := db.Use("test", "test"); err != nil {
-		t.Fatalf("unexpected error: %s", err)
+		t.Fatalf("unexpected Use error: %s", err)
+	}
+
+	if err := db.SignIn(surreal.Map{
+		"user": "test",
+		"pass": "test",
+	}); err != nil {
+		t.Fatalf("unexpected SignIn error: %s", err)
 	}
 
 	var array []int
