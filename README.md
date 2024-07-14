@@ -41,22 +41,13 @@ func main() {
     if err := db.Use("ns-test", "db-test"); err != nil {
         panic(err)
     }
-    
-    var array []int
-    var statusCode int
-    if err := db.Query(`return $test; return $test2;`, surreal.Map{
-        "test":  []int{1, 2, 3},
-        "test2": rand.Intn(213),
-    }, &array, &statusCode); err != nil {
-        panic(err)
-    }
-    
-    var user User
+	
+    var user map[string]any
     if err := db.Select("users:eqxomgmyq9z4lnl1gp65", &user); err != nil {
         panic(err)
     }
     
-    fmt.Println(array, statusCode, user)
+    fmt.Println(user)
 }
 ```
 

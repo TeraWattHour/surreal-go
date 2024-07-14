@@ -38,6 +38,11 @@ func TestEstablishConnection(t *testing.T) {
 		t.Fatalf("unexpected SignIn error: %s", err)
 	}
 
+	//var created []User
+	//_ = db.Create("users", User{
+	//	Name: "created-1",
+	//}, &created)
+
 	var array []int
 	var statusCode int
 	if err := db.Query(`return $test; return $test2;`, surreal.Map{
@@ -47,9 +52,11 @@ func TestEstablishConnection(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	var users []User
+	var users []map[string]any
 
 	if err := db.Select("users", &users); err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
+
+	fmt.Println(users)
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/terawatthour/surreal-go/rpc"
+	"reflect"
 )
 
 type DB struct {
@@ -41,6 +42,12 @@ func (db *DB) Let(identifier string, value any) error {
 	return err
 }
 
+// Unset removes an identifier from the current session.
+func (db *DB) Unset(identifier string) error {
+	_, err := db.conn.Send("unset", []any{identifier})
+	return err
+}
+
 func (db *DB) SignIn(creds Map) error {
 	_, err := db.conn.Send("signin", []any{creds})
 	return err
@@ -48,6 +55,16 @@ func (db *DB) SignIn(creds Map) error {
 
 func (db *DB) SignUp(creds Map) error {
 	_, err := db.conn.Send("signup", []any{creds})
+	return err
+}
+
+func (db *DB) Authenticate(token string) error {
+	_, err := db.conn.Send("authenticate", []any{token})
+	return err
+}
+
+func (db *DB) Invalidate() error {
+	_, err := db.conn.Send("invalidate", nil)
 	return err
 }
 
@@ -99,6 +116,43 @@ func (db *DB) Select(id string, destination any) error {
 
 	if err := json.Unmarshal(raw, destination); err != nil {
 		return fmt.Errorf("failed to decode result: %s", err)
+	}
+
+	return nil
+}
+
+// Create creates a record in a table, then decodes the row into the destination, if provided.
+// Destination may be either a pointer to a slice or a pointer to a single record (struct, map).
+func (db *DB) Create(table string, payload any, destination ...any) error {
+	raw, err := db.conn.Send("create", []any{table, payload})
+	if err != nil {
+		return err
+	}
+
+	if len(destination) != 0 {
+		if reflect.TypeOf(destination[0]).Kind() != reflect.Ptr {
+			return fmt.Errorf("expected pointer to destination")
+		}
+
+		switch reflect.Indirect(reflect.ValueOf(destination[0])).Kind() {
+		case reflect.Slice, reflect.Array:
+			if err := json.Unmarshal(raw, destination[0]); err != nil {
+				return fmt.Errorf("failed to decode result: %s", err)
+			}
+		default:
+			sliceType := reflect.SliceOf(reflect.Indirect(reflect.ValueOf(destination[0])).Type())
+			value := reflect.New(reflect.MakeSlice(sliceType, 1, 1).Type()).Elem()
+
+			if err := json.Unmarshal(raw, value.Addr().Interface()); err != nil {
+				return fmt.Errorf("failed to decode result: %s", err)
+			}
+
+			if value.Len() != 1 {
+				return fmt.Errorf("expected 1 record, got %d", value.Len())
+			}
+
+			reflect.Indirect(reflect.ValueOf(destination[0])).Set(value.Index(0))
+		}
 	}
 
 	return nil
