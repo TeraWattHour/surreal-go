@@ -44,7 +44,7 @@ func main() {
     
     var array []int
     var statusCode int
-    if err := db.Query(`return $test; return $test2;`, surreal.Args{
+    if err := db.Query(`return $test; return $test2;`, surreal.Map{
         "test":  []int{1, 2, 3},
         "test2": rand.Intn(213),
     }, &array, &statusCode); err != nil {
