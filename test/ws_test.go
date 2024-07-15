@@ -31,12 +31,16 @@ func TestEstablishConnection(t *testing.T) {
 		t.Fatalf("unexpected Use error: %s", err)
 	}
 
-	if err := db.SignIn(surreal.Map{
-		"user": "test",
-		"pass": "test",
-	}); err != nil {
-		t.Fatalf("unexpected SignIn error: %s", err)
-	}
+	fmt.Println(db.SignUp(surreal.SignUpArgs{
+		Namespace: "test",
+		Database:  "test",
+		Scope:     "user",
+		Other: surreal.Map{
+			"name":     "John Doe",
+			"email":    "john3@doe.org",
+			"password": "VerySecurePassword!",
+		},
+	}))
 
 	//var created []User
 	//_ = db.Create("users", User{

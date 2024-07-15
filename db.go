@@ -53,8 +53,28 @@ func (db *DB) SignIn(creds Map) error {
 	return err
 }
 
-func (db *DB) SignUp(creds Map) error {
-	_, err := db.conn.Send("signup", []any{creds})
+type SignUpArgs struct {
+	Namespace string `json:"NS"`
+	Database  string `json:"DB"`
+	Scope     string `json:"SC,omitempty"`
+	Access    string `json:"AC,omitempty"`
+	Other     Map    `json:"-"`
+}
+
+func (s SignUpArgs) MarshalJSON() ([]byte, error) {
+	s.Other["NS"] = s.Namespace
+	s.Other["DB"] = s.Database
+	if s.Scope != "" {
+		s.Other["SC"] = s.Scope
+	} else if s.Access != "" {
+		s.Other["AC"] = s.Access
+	}
+
+	return json.Marshal(s.Other)
+}
+
+func (db *DB) SignUp(args SignUpArgs) error {
+	_, err := db.conn.Send("signup", []any{args})
 	return err
 }
 

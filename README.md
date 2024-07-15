@@ -25,30 +25,36 @@ import (
 )
     
 func main() {
-    db, err := surreal.Connect("ws://localhost:8000/rpc", &surreal.Options{
+    // establish a connection to the SurrealDB server
+    db, _ := surreal.Connect("ws://localhost:8000/rpc", &surreal.Options{
         Verbose: true,
         WebSocketOptions: surreal.WebSocketOptions{
+            // the websocket driver doesn't handle reconnections, but you can do it yourself  
             OnDropCallback: func(reason error) {
                 fmt.Println("dropped connection", reason)
             },
         },
     })
-    if err != nil {
-        panic(err)
-    }
     defer db.Close()
     
-    if err := db.Use("ns-test", "db-test"); err != nil {
-        panic(err)
-    }
+    // set the desired namespace and database
+    _ = db.Use("ns-test", "db-test")
 	
+    // select desired data into either a map, struct, or a slice 
     var user map[string]any
-    if err := db.Select("users:eqxomgmyq9z4lnl1gp65", &user); err != nil {
-        panic(err)
-    }
-    
-    fmt.Println(user)
+    _ = db.Select("users:eqxomgmyq9z4lnl1gp65", &user)
 }
 ```
 
-
+### Methods
+| Method                                                   | Description                                                                                                             |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `Connect(url string, options *Options)`                  | Establishes a connection to the SurrealDB server. Currently only WebSockets are supported.                              |
+| `Use(namespace string, database string)`                 | Sets the desired namespace and database.                                                                                |
+| `Select(key string, target any)`                         | Selects the desired data into either a map, struct, or a slice.                                                         |
+| `Query(query string, vars any, scanDestinations ...any)` | Executes a query (or multiple semicolon separated queries) and selects the result into corresponding scan destinations. |
+| `Create(id string, data any)`                            | Creates a record in a table.                                                                                            |
+| `Delete(id string)`                                      | Deletes all records in a table or a single record.                                                                      |
+| `Let(identifier string, value any)`                      | Binds an identifier to a value.                                                                                         |
+| `Unset(identifier string)`                               | Unbinds an identifier.                                                                                                  |
+| `Close()`                                                | Closes the connection to the SurrealDB server.                                                                          |
