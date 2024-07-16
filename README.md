@@ -45,16 +45,3 @@ func main() {
     _ = db.Select("users:eqxomgmyq9z4lnl1gp65", &user)
 }
 ```
-
-### Methods
-| Method                                                   | Description                                                                                                             |
-|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| `Connect(url string, options *Options)`                  | Establishes a connection to the SurrealDB server. Currently only WebSockets are supported.                              |
-| `Use(namespace string, database string)`                 | Sets the desired namespace and database.                                                                                |
-| `Select(key string, target any)`                         | Selects the desired data into either a map, struct, or a slice.                                                         |
-| `Query(query string, vars any, scanDestinations ...any)` | Executes a query (or multiple semicolon separated queries) and selects the result into corresponding scan destinations. |
-| `Create(id string, data any)`                            | Creates a record in a table.                                                                                            |
-| `Delete(id string)`                                      | Deletes all records in a table or a single record.                                                                      |
-| `Let(identifier string, value any)`                      | Binds an identifier to a value.                                                                                         |
-| `Unset(identifier string)`                               | Unbinds an identifier.                                                                                                  |
-| `Close()`                                                | Closes the connection to the SurrealDB server.                                                                          |

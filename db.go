@@ -4,30 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/terawatthour/surreal-go/rpc"
-	"reflect"
 )
 
 type DB struct {
 	conn    Connection
 	options *Options
 }
-
-type QueryError struct {
-	QueryNo int
-	Message string
-}
-
-type QueryErrors []QueryError
-
-func (q QueryErrors) Error() string {
-	var s string
-	for _, e := range q {
-		s += fmt.Sprintf("query %d failed with error: `%s`; ", e.QueryNo, e.Message)
-	}
-	return s
-}
-
-type Map map[string]any
 
 // Use sets the namespace and database name for the current connection. Should be called after the connection is
 // established, but before any queries are sent.
@@ -48,32 +30,12 @@ func (db *DB) Unset(identifier string) error {
 	return err
 }
 
-func (db *DB) SignIn(creds Map) error {
-	_, err := db.conn.Send("signin", []any{creds})
+func (db *DB) SignIn(args AuthArgs) error {
+	_, err := db.conn.Send("signin", []any{args})
 	return err
 }
 
-type SignUpArgs struct {
-	Namespace string `json:"NS"`
-	Database  string `json:"DB"`
-	Scope     string `json:"SC,omitempty"`
-	Access    string `json:"AC,omitempty"`
-	Other     Map    `json:"-"`
-}
-
-func (s SignUpArgs) MarshalJSON() ([]byte, error) {
-	s.Other["NS"] = s.Namespace
-	s.Other["DB"] = s.Database
-	if s.Scope != "" {
-		s.Other["SC"] = s.Scope
-	} else if s.Access != "" {
-		s.Other["AC"] = s.Access
-	}
-
-	return json.Marshal(s.Other)
-}
-
-func (db *DB) SignUp(args SignUpArgs) error {
+func (db *DB) SignUp(args AuthArgs) error {
 	_, err := db.conn.Send("signup", []any{args})
 	return err
 }
@@ -143,36 +105,68 @@ func (db *DB) Select(id string, destination any) error {
 
 // Create creates a record in a table, then decodes the row into the destination, if provided.
 // Destination may be either a pointer to a slice or a pointer to a single record (struct, map).
-func (db *DB) Create(table string, payload any, destination ...any) error {
-	raw, err := db.conn.Send("create", []any{table, payload})
+func (db *DB) Create(table string, data any, destination ...any) error {
+	raw, err := db.conn.Send("create", []any{table, data})
 	if err != nil {
 		return err
 	}
 
 	if len(destination) != 0 {
-		if reflect.TypeOf(destination[0]).Kind() != reflect.Ptr {
-			return fmt.Errorf("expected pointer to destination")
-		}
+		return autoScan(raw, destination[0])
+	}
 
-		switch reflect.Indirect(reflect.ValueOf(destination[0])).Kind() {
-		case reflect.Slice, reflect.Array:
-			if err := json.Unmarshal(raw, destination[0]); err != nil {
-				return fmt.Errorf("failed to decode result: %s", err)
-			}
-		default:
-			sliceType := reflect.SliceOf(reflect.Indirect(reflect.ValueOf(destination[0])).Type())
-			value := reflect.New(reflect.MakeSlice(sliceType, 1, 1).Type()).Elem()
+	return nil
+}
 
-			if err := json.Unmarshal(raw, value.Addr().Interface()); err != nil {
-				return fmt.Errorf("failed to decode result: %s", err)
-			}
+// Insert inserts a record, or multiple records, into a table, then decodes the rows into the destination, if provided.
+// Destination may be either a pointer to a slice or a pointer to a single record (struct, map).
+func (db *DB) Insert(table string, data any, destination ...any) error {
+	raw, err := db.conn.Send("insert", []any{table, data})
+	if err != nil {
+		return err
+	}
 
-			if value.Len() != 1 {
-				return fmt.Errorf("expected 1 record, got %d", value.Len())
-			}
+	if len(destination) != 0 {
+		return autoScan(raw, destination[0])
+	}
 
-			reflect.Indirect(reflect.ValueOf(destination[0])).Set(value.Index(0))
-		}
+	return nil
+}
+
+func (db *DB) Update(id string, data any, destination ...any) error {
+	raw, err := db.conn.Send("update", []any{id, data})
+	if err != nil {
+		return err
+	}
+
+	if len(destination) != 0 {
+		return autoScan(raw, destination[0])
+	}
+
+	return nil
+}
+
+func (db *DB) Upsert(id string, data any, destination ...any) error {
+	raw, err := db.conn.Send("upsert", []any{id, data})
+	if err != nil {
+		return err
+	}
+
+	if len(destination) != 0 {
+		return autoScan(raw, destination[0])
+	}
+
+	return nil
+}
+
+func (db *DB) Merge(id string, data any, destination ...any) error {
+	raw, err := db.conn.Send("merge", []any{id, data})
+	if err != nil {
+		return err
+	}
+
+	if len(destination) != 0 {
+		return autoScan(raw, destination[0])
 	}
 
 	return nil
@@ -199,6 +193,60 @@ func (db *DB) Delete(id string, destination ...any) error {
 	return nil
 }
 
+// Info retrieves information about the current scope(!) user.
+func (db *DB) Info(destination any) error {
+	raw, err := db.conn.Send("info", []any{})
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(raw, destination)
+}
+
+// Version retrieves the version of the database.
+func (db *DB) Version() (string, error) {
+	raw, err := db.conn.Send("version", []any{})
+	return string(raw[1 : len(raw)-1]), err
+}
+
+// Close closes the connection to the database.
 func (db *DB) Close() error {
 	return db.conn.Close()
 }
+
+type AuthArgs struct {
+	Namespace string `json:"NS"`
+	Database  string `json:"DB"`
+	Scope     string `json:"SC,omitempty"`
+	Access    string `json:"AC,omitempty"`
+	Other     Map    `json:"-"`
+}
+
+func (s AuthArgs) MarshalJSON() ([]byte, error) {
+	s.Other["NS"] = s.Namespace
+	s.Other["DB"] = s.Database
+	if s.Scope != "" {
+		s.Other["SC"] = s.Scope
+	} else if s.Access != "" {
+		s.Other["AC"] = s.Access
+	}
+
+	return json.Marshal(s.Other)
+}
+
+type QueryError struct {
+	QueryNo int
+	Message string
+}
+
+type QueryErrors []QueryError
+
+func (q QueryErrors) Error() string {
+	var s string
+	for _, e := range q {
+		s += fmt.Sprintf("query %d failed with error: `%s`; ", e.QueryNo, e.Message)
+	}
+	return s
+}
+
+type Map map[string]any

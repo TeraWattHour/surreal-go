@@ -3,7 +3,6 @@ package test
 import (
 	"fmt"
 	"github.com/terawatthour/surreal-go"
-	"math/rand"
 	"testing"
 )
 
@@ -31,36 +30,57 @@ func TestEstablishConnection(t *testing.T) {
 		t.Fatalf("unexpected Use error: %s", err)
 	}
 
-	fmt.Println(db.SignUp(surreal.SignUpArgs{
+	creds := surreal.AuthArgs{
 		Namespace: "test",
 		Database:  "test",
 		Scope:     "user",
 		Other: surreal.Map{
 			"name":     "John Doe",
-			"email":    "john3@doe.org",
+			"email":    "john@doe.com",
 			"password": "VerySecurePassword!",
 		},
-	}))
-
-	//var created []User
-	//_ = db.Create("users", User{
-	//	Name: "created-1",
-	//}, &created)
-
-	var array []int
-	var statusCode int
-	if err := db.Query(`return $test; return $test2;`, surreal.Map{
-		"test":  []int{1, 2, 3},
-		"test2": rand.Intn(213),
-	}, &array, &statusCode); err != nil {
-		t.Fatalf("unexpected error: %s", err)
 	}
 
-	var users []map[string]any
+	fmt.Println(db.SignUp(creds))
 
-	if err := db.Select("users", &users); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	fmt.Println(db.SignIn(creds))
 
-	fmt.Println(users)
+	var retrievedCreds map[string]any
+	db.Info(&retrievedCreds)
+	fmt.Println(retrievedCreds)
+
+	//fmt.Println(db.SignUp(surreal.AuthArgs{
+	//	Namespace: "test",
+	//	Database:  "test",
+	//	Scope:     "user",
+	//	Other: surreal.Map{
+	//		"name":     "John Doe",
+	//		"email":    "john3@doe.org",
+	//		"password": "VerySecurePassword!",
+	//	},
+	//}))
+	//
+	////var created []User
+	////_ = db.Create("users", User{
+	////	Name: "created-1",
+	////}, &created)
+	//
+	//var array []int
+	//var statusCode int
+	//if err := db.Query(`return $test; return $test2;`, surreal.Map{
+	//	"test":  []int{1, 2, 3},
+	//	"test2": rand.Intn(213),
+	//}, &array, &statusCode); err != nil {
+	//	t.Fatalf("unexpected error: %s", err)
+	//}
+	//
+	//fmt.Println(array, statusCode)
+	//
+	//var users []map[string]any
+	//
+	//if err := db.Select("users", &users); err != nil {
+	//	t.Fatalf("unexpected error: %s", err)
+	//}
+	//
+	//fmt.Println(users)
 }

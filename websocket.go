@@ -48,6 +48,10 @@ type WebSocketConnection struct {
 }
 
 func establishWebsocketConnection(url string, options *Options) (Connection, error) {
+	if options == nil {
+		options = &Options{}
+	}
+
 	dialer := websocket.DefaultDialer
 	dialer.EnableCompression = !options.WebSocketOptions.DisableCompression
 	dialer.HandshakeTimeout = 10 * time.Second
