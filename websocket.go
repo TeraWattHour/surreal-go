@@ -169,6 +169,12 @@ func (ws *WebSocketConnection) write(msg any) error {
 }
 
 func (ws *WebSocketConnection) close(reason error) error {
+	select {
+	case <-ws.done:
+		return nil
+	default:
+	}
+
 	defer func() {
 		ws.doneOnce.Do(func() {
 			close(ws.done)
@@ -182,7 +188,6 @@ func (ws *WebSocketConnection) close(reason error) error {
 
 	ws.connLock.Lock()
 	_ = ws.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1000, ""))
-
 	return ws.conn.Close()
 }
 
