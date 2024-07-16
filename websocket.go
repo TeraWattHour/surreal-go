@@ -139,7 +139,6 @@ func (ws *WebSocketConnection) Run() {
 				}
 				return
 			}
-
 			if err := json.Unmarshal(msg, &incoming); err != nil {
 				if ws.options.Verbose {
 					log.Println("failed to unmarshal message from surreal: ", err)
@@ -173,6 +172,7 @@ func (ws *WebSocketConnection) close(reason error) error {
 
 	select {
 	case <-ws.done:
+		ws.connLock.Unlock()
 		return nil
 	default:
 	}

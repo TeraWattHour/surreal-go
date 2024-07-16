@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"github.com/terawatthour/surreal-go"
 	"testing"
 	"time"
@@ -136,4 +137,24 @@ func TestMerge(t *testing.T) {
 	if nonExistentSingle.UpdatedAt.Unix() != now.Unix() {
 		t.Fatalf("Non-existent single merge failed: %+v", nonExistent)
 	}
+}
+
+func TestPatch(t *testing.T) {
+	db := connect()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	now := time.Now()
+
+	var patched []Article
+	// sets every article's createdAt to now, deletes updatedAt
+	if err := db.Patch("article", []surreal.Diff{
+		{"replace", "/createdAt", now},
+		{"replace", "/updatedAt", nil}}, &patched); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(patched)
 }

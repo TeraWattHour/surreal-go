@@ -6,11 +6,6 @@ import (
 	"testing"
 )
 
-type User struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-}
-
 func TestEstablishConnection(t *testing.T) {
 	db, err := surreal.Connect("ws://localhost:8000/rpc", &surreal.Options{
 		Verbose: true,
@@ -33,21 +28,25 @@ func TestEstablishConnection(t *testing.T) {
 	creds := surreal.AuthArgs{
 		Namespace: "test",
 		Database:  "test",
-		Scope:     "user",
 		Other: surreal.Map{
-			"name":     "John Doe",
-			"email":    "john@doe.com",
-			"password": "VerySecurePassword!",
+			"user": "test",
+			"pass": "test",
 		},
 	}
 
-	fmt.Println(db.SignUp(creds))
-
 	fmt.Println(db.SignIn(creds))
 
-	var retrievedCreds map[string]any
-	db.Info(&retrievedCreds)
-	fmt.Println(retrievedCreds)
+	//db.Ping()
+
+	var output map[string]any
+	fmt.Println(db.Relate("user:5u6r70j6ctuh3mofr5um", "wrote", "article:qilgqq869gkzesfcts8u", surreal.Map{
+		"assignedBy": "el_jefe",
+	}, &output))
+
+	fmt.Println(output)
+	//var retrievedCreds map[string]any
+	//db.Info(&retrievedCreds)
+	//fmt.Println(retrievedCreds)
 
 	//fmt.Println(db.SignUp(surreal.AuthArgs{
 	//	Namespace: "test",

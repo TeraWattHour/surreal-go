@@ -133,6 +133,19 @@ func (db *DB) Insert(table string, data any, destination ...any) error {
 	return nil
 }
 
+func (db *DB) Relate(from any, thing string, to any, data any, destination ...any) error {
+	raw, err := db.conn.Send("relate", []any{from, thing, to, data})
+	if err != nil {
+		return err
+	}
+
+	if len(destination) != 0 {
+		return autoScan(raw, destination[0])
+	}
+
+	return nil
+}
+
 func (db *DB) Update(id string, data any, destination ...any) error {
 	raw, err := db.conn.Send("update", []any{id, data})
 	if err != nil {
@@ -159,6 +172,19 @@ func (db *DB) Upsert(id string, data any, destination ...any) error {
 	return nil
 }
 
+func (db *DB) Patch(id string, diff []Diff, destination ...any) error {
+	raw, err := db.conn.Send("patch", []any{id, diff})
+	if err != nil {
+		return err
+	}
+
+	if len(destination) != 0 {
+		return autoScan(raw, destination[0])
+	}
+
+	return nil
+}
+
 func (db *DB) Merge(id string, data any, destination ...any) error {
 	raw, err := db.conn.Send("merge", []any{id, data})
 	if err != nil {
@@ -173,21 +199,14 @@ func (db *DB) Merge(id string, data any, destination ...any) error {
 }
 
 // Delete deletes a record, or all records, from a table, then decodes the rows into the destination, if provided.
-// Panics if more than one destination is provided.
 func (db *DB) Delete(id string, destination ...any) error {
 	raw, err := db.conn.Send("delete", []any{id})
 	if err != nil {
 		return err
 	}
 
-	if len(destination) > 1 {
-		panic("expected at most 1 destination")
-	}
-
-	if len(destination) > 0 {
-		if err := json.Unmarshal(raw, destination[0]); err != nil {
-			return fmt.Errorf("failed to decode result: %s", err)
-		}
+	if len(destination) != 0 {
+		return autoScan(raw, destination[0])
 	}
 
 	return nil
@@ -203,6 +222,11 @@ func (db *DB) Info(destination any) error {
 	return json.Unmarshal(raw, destination)
 }
 
+func (db *DB) Ping() error {
+	_, err := db.conn.Send("ping", []any{})
+	return err
+}
+
 // Version retrieves the version of the database.
 func (db *DB) Version() (string, error) {
 	raw, err := db.conn.Send("version", []any{})
@@ -212,6 +236,12 @@ func (db *DB) Version() (string, error) {
 // Close closes the connection to the database.
 func (db *DB) Close() error {
 	return db.conn.Close()
+}
+
+type Diff struct {
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value any    `json:"value"`
 }
 
 type AuthArgs struct {
