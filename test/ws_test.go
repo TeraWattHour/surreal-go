@@ -36,8 +36,6 @@ func TestEstablishConnection(t *testing.T) {
 
 	fmt.Println(db.SignIn(creds))
 
-	//db.Ping()
-
 	var output map[string]any
 	fmt.Println(db.Relate("user:5u6r70j6ctuh3mofr5um", "wrote", "article:qilgqq869gkzesfcts8u", surreal.Map{
 		"assignedBy": "el_jefe",

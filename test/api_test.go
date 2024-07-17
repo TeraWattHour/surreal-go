@@ -1,8 +1,10 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/terawatthour/surreal-go"
+	"github.com/terawatthour/surreal-go/rpc"
 	"testing"
 	"time"
 )
@@ -157,4 +159,39 @@ func TestPatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(patched)
+}
+
+func TestLive(t *testing.T) {
+	db := connect()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	received := false
+	id, err := db.Live("article", func(payload rpc.LiveNotification) {
+		var diff []surreal.LiveDiff
+		if err := json.Unmarshal(payload.Result, &diff); err != nil {
+			fmt.Println("failed to unmarshal live diff", err)
+			return
+		}
+
+		received = true
+
+		fmt.Println("article updated", diff)
+	}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Kill(id)
+
+	_ = db.Create("article", Article{
+		Title:   "Hello, World!",
+		Content: "This is the first article",
+	})
+
+	for !received {
+
+	}
 }

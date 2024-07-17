@@ -12,8 +12,11 @@ func autoScan(raw []byte, destination any) error {
 		return fmt.Errorf("expected pointer to destination")
 	}
 
-	// query returned an array
-	if len(raw) > 0 && raw[0] == '[' {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	if raw[0] == '[' {
 		switch reflect.Indirect(reflect.ValueOf(destination)).Kind() {
 		case reflect.Slice, reflect.Array:
 			if err := json.Unmarshal(raw, destination); err != nil {
@@ -31,7 +34,7 @@ func autoScan(raw []byte, destination any) error {
 				reflect.Indirect(reflect.ValueOf(destination)).Set(value.Index(0))
 			}
 		}
-	} else {
+	} else if raw[0] == '{' {
 		switch reflect.Indirect(reflect.ValueOf(destination)).Kind() {
 		case reflect.Slice, reflect.Array:
 			sliceType := reflect.Indirect(reflect.ValueOf(destination)).Type().Elem()

@@ -43,6 +43,8 @@ type WebSocketConnection struct {
 	responseChannels     map[string]chan rpc.Incoming
 	responseChannelsLock sync.RWMutex
 
+	liveCallbacks map[string]func(notification rpc.LiveNotification)
+
 	done     chan struct{}
 	doneOnce sync.Once
 }
@@ -65,6 +67,7 @@ func establishWebsocketConnection(url string, options *Options) (Connection, err
 		conn:             c,
 		options:          options,
 		done:             make(chan struct{}),
+		liveCallbacks:    make(map[string]func(notification rpc.LiveNotification)),
 		responseChannels: make(map[string]chan rpc.Incoming),
 	}
 
@@ -151,6 +154,10 @@ func (ws *WebSocketConnection) Run() {
 	}
 }
 
+func (ws *WebSocketConnection) RegisterLiveCallback(event string, callback func(notification rpc.LiveNotification)) {
+	ws.liveCallbacks[event] = callback
+}
+
 func (ws *WebSocketConnection) Close() error {
 	return ws.close(nil)
 }
@@ -195,7 +202,14 @@ func (ws *WebSocketConnection) close(reason error) error {
 func (ws *WebSocketConnection) handleResponse(incoming rpc.Incoming) {
 	switch incoming.ID {
 	case "", nil:
-		panic("live notifications and events are not supported")
+		var event rpc.LiveNotification
+		if err := json.Unmarshal(incoming.Result, &event); err != nil {
+			return
+		}
+
+		if callback, ok := ws.liveCallbacks[event.ID]; ok {
+			callback(event)
+		}
 	default:
 		ch, ok := ws.acquireResponseChannel(fmt.Sprintf("%v", incoming.ID))
 		if !ok {

@@ -21,6 +21,12 @@ type Outgoing struct {
 	Params []any  `json:"params,omitempty"`
 }
 
+type LiveNotification struct {
+	ID     string          `json:"id"`
+	Action string          `json:"action"`
+	Result json.RawMessage `json:"result"`
+}
+
 type Error struct {
 	Code    int    `json:"code"`
 	Message string `json:"message,omitempty"`

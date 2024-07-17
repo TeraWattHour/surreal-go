@@ -172,6 +172,28 @@ func (db *DB) Upsert(id string, data any, destination ...any) error {
 	return nil
 }
 
+func (db *DB) Live(id string, callback func(notification rpc.LiveNotification), diff bool) (string, error) {
+	raw, err := db.conn.Send("live", []any{id, diff})
+	if err != nil {
+		return "", err
+	}
+
+	if raw[0] == '"' {
+		id := string(raw[1 : len(raw)-1])
+
+		db.conn.RegisterLiveCallback(id, callback)
+
+		return id, nil
+	}
+
+	return "", fmt.Errorf("failed to start live query")
+}
+
+func (db *DB) Kill(id string) error {
+	_, err := db.conn.Send("kill", []any{id})
+	return err
+}
+
 func (db *DB) Patch(id string, diff []Diff, destination ...any) error {
 	raw, err := db.conn.Send("patch", []any{id, diff})
 	if err != nil {
